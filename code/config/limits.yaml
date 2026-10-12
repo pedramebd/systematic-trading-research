@@ -1,0 +1,55 @@
+# The risk constitution, machine-readable.
+# CONSTITUTION.md explains the reasoning. THIS FILE is the authority.
+# Every value here is enforced in src/tradingbot/risk/ and tested in
+# tests/test_risk_limits.py. Changing a value requires a human-approved PR.
+
+version: 1
+
+loss_limits:
+  daily_loss_pct: 2.0          # halt for the rest of the day
+  weekly_loss_pct: 5.0         # halt for the week, written review required
+  drawdown_warn_pct: 10.0      # REDUCE exposure (see drawdown_warn_exposure)
+  drawdown_warn_exposure: 0.5  # multiply target weights by this while in warn.
+                               # Lifts automatically when drawdown recovers below
+                               # drawdown_warn_pct. It reduces risk only, so it
+                               # needs no human reset.
+  drawdown_stop_pct: 15.0      # full stop, PERMANENT, human reset only
+  max_consecutive_losses: 5    # per strategy
+
+position_limits:
+  max_risk_per_trade_pct: 1.0
+  max_instrument_pct: 100.0      # SPY and GLD are diversified index funds, so
+                               # the single-name 20% rule does not fit them.
+                               # config.py REFUSES TO LOAD if any tradeable
+                               # symbol is not an *_etf while this is above 20.
+  max_gross_exposure_pct: 100.0   # 100 = no leverage. Do not raise.
+  max_book_correlation: 0.7
+  rebalance_band_pct: 0.5      # do not trade a symbol until its weight has
+                               # drifted this far from target. Without a band,
+                               # a constant target still trades every bar as
+                               # prices move, paying costs for nothing.
+
+operational:
+  max_data_staleness_minutes: 15
+  session_edge_minutes: 15        # no trading in first/last N minutes
+  vol_regime_multiple: 2.0        # realised vol vs backtest assumption
+  require_reconciliation: true
+
+promotion_gates:
+  min_paper_months: 3
+  paper_live_tolerance: 0.30      # paper Sharpe within 30% of backtest
+  min_deflated_sharpe: 0.95
+  min_oos_sharpe: 0.8
+  max_oos_drawdown_pct: 15.0
+
+permissions:
+  allow_leverage: false
+  allow_shorting: false
+  allow_live_trading: false       # paper only until explicitly flipped
+
+costs:
+  # Deliberately pessimistic. Optimistic cost assumptions are the most
+  # common way a backtest lies.
+  commission_bps: 0.0             # Alpaca equities are commission-free
+  slippage_bps: 5.0
+  spread_bps: 2.0

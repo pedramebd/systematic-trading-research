@@ -1,0 +1,47 @@
+# Only instruments listed here may be traded.
+
+version: 1
+
+execution:
+  # What the bot is permitted to hold. US ETFs via Alpaca paper.
+  - symbol: SPY
+    asset_class: equity_etf
+    description: S&P 500 ETF -- primary execution instrument and benchmark
+  - symbol: GLD
+    asset_class: commodity_etf
+    description: Gold ETF -- gold exposure without a separate broker
+
+signal_only:
+  # Read for signal generation. NEVER traded.
+  - symbol: BTC-USD
+    asset_class: crypto
+    description: weekend variance input to the volatility channel
+  - symbol: ETH-USD
+    asset_class: crypto
+    description: weekend variance input to the volatility channel
+  - symbol: ^VIX
+    asset_class: index
+    description: equity implied volatility
+  - symbol: ^VIX3M
+    asset_class: index
+    description: 3-month equity implied volatility, for the VIX term structure
+  - symbol: CL=F
+    asset_class: commodity_future
+    description: WTI crude front month, for the briefing's market-risk section
+  - symbol: ^IRX
+    asset_class: index
+    description: 13-week T-bill rate, fallback for FRED DTB3 cash accrual (trend_spy_gld)
+  - symbol: ^MOVE
+    asset_class: index
+    description: bond implied volatility
+  - symbol: HYG
+    asset_class: bond_etf
+    description: high-yield credit, for spread computation
+  - symbol: LQD
+    asset_class: bond_etf
+    description: investment-grade credit, for spread computation
+  - symbol: DX-Y.NYB
+    asset_class: fx_index
+    description: US dollar index
+
+benchmark: SPY

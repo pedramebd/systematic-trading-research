@@ -1,0 +1,42 @@
+# Research cost model, per asset class. RESEARCH ONLY.
+#
+# config/limits.yaml stays the authority for the live system and for every
+# backtest that does not opt in: `backtest.run` charges limits.yaml's single
+# one-way cost to every symbol unless it is passed `cost_bps`. This file only
+# supplies that mapping when a validation script asks for it.
+#
+# Never lower a number here to rescue a result. A change is a commit a human
+# reviews, made before the run that uses it.
+#
+# One-way cost = commission_bps + slippage_bps + spread_bps / 2, the same
+# formula as limits.yaml.
+
+version: 1
+
+asset_classes:
+  # `limits` = use config/limits.yaml `costs` (6 bp one way today), so the
+  # ETF number has exactly one home.
+  equity_etf: limits
+  commodity_etf: limits
+  bond_etf: limits
+  crypto:
+    commission_bps: 25.0  # Alpaca crypto taker fee, 0.25% per side
+    slippage_bps: 0.0
+    spread_bps: 10.0      # PLACEHOLDER AND FLOOR, not measured: Alpaca does
+                          # not publish its crypto spread. Rules (decided
+                          # 2026-10-07):
+                          #  1. Never lower this below 10.0.
+                          #  2. Before ANY crypto trial, measure the real
+                          #     spread from Alpaca crypto quotes and use the
+                          #     larger of measured and 10.0.
+                          #  3. A crypto strategy must also pass its gates at
+                          #     DOUBLE the one-way cost. Failing at 2x is a
+                          #     fail. Write both into its pre-registration.
+
+# Symbols not listed in config/universe.yaml. A symbol listed here AND there
+# with a different class is an error.
+symbols:
+  BTCUSDT: crypto
+  ETHUSDT: crypto
+  BTC/USD: crypto
+  ETH/USD: crypto
