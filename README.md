@@ -14,6 +14,15 @@ backtest from lying, and every one of them is published below.
 in a private repository; this repo is a self-contained extract (see
 [`code/`](code/)).*
 
+## My role
+
+I designed this system and made every decision in it: the constitution and
+risk limits, the architecture, the research protocol, which ideas to test,
+every pre-registration choice, and every verdict. Claude Code (Anthropic) was
+used as a coding assistant: much of the code was written by it under my
+direction and review, and its agents act as adversarial reviewers. No AI model
+runs in the order path.
+
 ## Architecture
 
 ```mermaid
@@ -166,7 +175,7 @@ limits, so their criteria do not move. Equity curves:
 
 ## Stack
 
-Python 3.11-3.13 · pandas · NumPy · SciPy · PyArrow · pytest (777 tests in the
+Python 3.11-3.13 · pandas · NumPy · SciPy · PyArrow · pytest (805 tests in the
 full system) · ruff · mypy ·
 GitHub Actions (scheduled runs, CI, branch protection, CODEOWNERS on risk and
 execution paths) · Alpaca paper-trading API · Yahoo Finance, FRED and Binance
