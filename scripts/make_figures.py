@@ -5,7 +5,8 @@
 This script is published so the method behind each figure is visible. It does
 NOT run on its own: it imports the private research repository's frozen
 validation scripts (`research/validate_*.py`) and reads their local, gitignored
-research data snapshots (daily ETF bars, T-bill rates, weekend crypto variance).
+research data snapshots (daily ETF bars, T-bill and SONIA rates, weekend crypto
+variance, the gilt-ETF and 12-ETF total-return files).
 No account, broker or paper-trading data is touched.
 
 Each trial is re-run on the CURRENT harness (the corrected one), using that
@@ -316,15 +317,112 @@ def trial_4(source: Path) -> None:
     )
 
 
+# ---- trials 5 and 6: total-return inputs, pinned by SHA-256 --------------------
+
+
+def trial_5(source: Path) -> None:
+    print("trial 5  month_end_gilt")
+    v = load_module(source, "validate_month_end_gilt")
+    problems = v.verify_hashes(v.DATA_DIR)
+    if problems:
+        raise SystemExit("pinned inputs do not match: " + "; ".join(problems))
+    inputs = v.load_inputs(v.DATA_DIR)
+    cfg = v.Config()
+    calc = v.calc
+    values = inputs.tr.sort_index()
+    values = values.loc[values.index <= cfg.eval_end]
+    sonia = inputs.sonia.loc[inputs.sonia.index <= cfg.eval_end]
+    sessions = v.trading_days(values.index.min(), values.index.max(), include_special=True)
+    factor = calc.accrual_factor(sonia, sessions)
+    months = calc.months_between(cfg.first_month, cfg.last_month)
+    table = calc.monthly_table(values, factor, months, cfg.round_trip_bp)
+    index = values.index[(values.index >= cfg.eval_start) & (values.index <= cfg.eval_end)]
+    excess = calc.daily_excess(values, factor, table, index, cfg.round_trip_bp)
+    # Cash earns the SONIA accrual on every bar, so the strategy's total return is its
+    # daily excess plus that accrual; the control is the accrual alone.
+    cash = calc.bar_accrual(factor, index).reindex(index)
+    strategy = (excess + cash).iloc[1:]
+    cash = cash.iloc[1:]
+    hold = values.reindex(index).pct_change().iloc[1:]
+    check("daily excess Sharpe, strategy (unenforced)", v.metrics.sharpe(excess), -0.0206)
+    print(
+        f"  Sharpe in excess of SONIA, buy-and-hold IGLT {v.metrics.sharpe(hold - cash): .4f}"
+        "  (information)"
+    )
+    plot(
+        "month_end_gilt",
+        "Trial 5  month_end_gilt: FAIL",
+        "Gilt ETF over the last 3 sessions of each month, SONIA cash otherwise, 2009-01 .. "
+        "2026-09. 14 bp round trip; no risk limits.",
+        [
+            ("strategy: gilt ETF, last 3 sessions only", strategy, STRATEGY, "-"),
+            ("control: cash at SONIA", cash, CONTROL, "-"),
+            ("IGLT buy-and-hold (information only)", hold, INFO, "--"),
+        ],
+    )
+
+
+def trial_6(source: Path) -> None:
+    print("trial 6  trend_multi_core")
+    v = load_module(source, "validate_trend_multi_core")
+    problems = v.verify_hashes(v.DATA_DIR)
+    if problems:
+        raise SystemExit("pinned inputs do not match: " + "; ".join(problems))
+    inputs = v.load_inputs(v.DATA_DIR)
+    cfg = v.Config()
+    pf, stats = v.portfolio, v.trend_stats
+    accrual_full = pf.build_accrual(inputs.rate, cfg.accrual_start, cfg.window.end)
+    panel = pf.make_panel(inputs.tiingo_tr, accrual_full, cfg.window.end)
+    table = pf.compute_targets(panel.tr, panel.accrual)
+    trend = pf.simulate_arm(panel, table, True, pf.ISA_COSTS, "trend")
+    control = pf.simulate_arm(panel, table, False, pf.ISA_COSTS, "control")
+    # The curves do not depend on the bootstrap, so a small n_boot is enough here.
+    ev = stats.evaluate_source(
+        "Tiingo", trend.returns, control.returns, panel.accrual, cfg.window, n_boot=50
+    )
+    window = cfg.window
+    check("max drawdown ratio, trend / vm control", ev.mdd_ratio, 1.0211)
+    check(
+        "excess Sharpe, trend (unenforced)",
+        stats.excess_sharpe(
+            pf.window_series(trend.returns, window), pf.window_series(panel.accrual, window)
+        ),
+        0.4692,
+    )
+    plot(
+        "trend_multi_core",
+        "Trial 6  trend_multi_core: FAIL (max drawdown ratio 1.02 vs limit 0.75)",
+        "Volatility-scaled trend on 12 ETFs, 2007-03 .. 2026-09, Tiingo total returns. ISA "
+        "costs; no risk limits (criteria basis).",
+        [
+            ("strategy: trend, vol-scaled", ev.daily_trend, STRATEGY, "-"),
+            ("control: same portfolio, held at matched volatility", ev.daily_vm, CONTROL, "-"),
+            (
+                "inverse-vol portfolio, no signal (information only)",
+                pf.window_series(control.returns, window),
+                INFO,
+                "--",
+            ),
+        ],
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--source", type=Path, required=True, help="private repo checkout"
     )
-    parser.add_argument("--only", nargs="*", type=int, choices=[1, 2, 3, 4])
+    parser.add_argument("--only", nargs="*", type=int, choices=[1, 2, 3, 4, 5, 6])
     args = parser.parse_args()
     source = args.source.resolve()
-    for number, fn in [(1, trial_1), (2, trial_2), (3, trial_3), (4, trial_4)]:
+    for number, fn in [
+        (1, trial_1),
+        (2, trial_2),
+        (3, trial_3),
+        (4, trial_4),
+        (5, trial_5),
+        (6, trial_6),
+    ]:
         if not args.only or number in args.only:
             fn(source)
     return 0
