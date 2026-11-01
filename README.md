@@ -6,9 +6,9 @@ risk layer vetoes any order that would breach the limits, and **no model sits
 in the order path**. Every idea is pre-registered, tested once, and judged by
 an independent validator.
 
-**Four trials tested so far, four FAILs, and one idea withdrawn before
-testing.** That is the intended outcome of a process designed to stop a
-backtest from lying, and every one of them is published below.
+**Six trials tested, six FAILs, and one idea withdrawn before testing.** That
+is the intended outcome of a process designed to stop a backtest from lying,
+and every one of them is published below.
 
 *Paper trading only. Nothing here is investment advice. The full system lives
 in a private repository; this repo is a self-contained extract (see
@@ -134,6 +134,8 @@ pass at double cost.
 | 3 | [`trend_spy_gld`](docs/trials/trend_spy_gld.md) | 10-month trend filter on SPY + GLD | **FAIL** | Sharpe 0.654 vs control 0.728; permutation p = 0.15 | 0.5584 / 0.5584 → **0.4575 / 0.4575** |
 | – | [`month_end_flows`](docs/trials/month_end_flows.md) | Front-run 60/40 rebalancing flows | **WITHDRAWN** | Ex-ante costs ~5-6.5%/yr vs ~10% gross; never run, not counted | – |
 | 4 | [`turn_of_month`](docs/trials/turn_of_month.md) | Hold SPY only over Day −1..+3 | **FAIL** | Sharpe 0.153 vs buy-and-hold 0.585, loses at zero cost; permutation p = 0.31 | −0.2304 / −0.2304 → **−0.2304 / −0.2304** |
+| 5 | [`month_end_gilt`](docs/trials/month_end_gilt.md) | Hold a UK gilt ETF over the last three sessions of the month | **FAIL** | Net mean −0.5 bp a month (t −0.09): +13.5 bp gross, 14 bp cost; negative after 2015 | 0.0743 / 0.0743 (run on the corrected harness) |
+| 6 | [`trend_multi_core`](docs/trials/trend_multi_core.md) | Volatility-scaled trend across 12 ETFs, vs the same portfolio held at matched volatility | **FAIL** | Drawdown ratio **1.02** vs limit 0.75 on both data sources; tail gain marginal (p 0.042 / 0.049) | 0.4884 / 0.4884 (run on the corrected harness) |
 
 **What the last column means.** The registry Sharpe is the *risk-enforced*
 backtest Sharpe that feeds every later trial's deflated-Sharpe calculation. In
@@ -142,8 +144,52 @@ check never fired, and the weekly-loss check dropped each week's last session.
 Both were fixed, and every trial was re-measured. The recorded values are kept
 as what each trial was judged on, and the corrected values sit alongside them.
 **No verdict changed.** Trials 3 and 4 were scored on runs without risk
-limits, so their criteria do not move. Equity curves:
-[`docs/figures/`](docs/figures/).
+limits, so their criteria do not move. Trials 5 and 6 ran after the fix, so
+their recorded and corrected values are the same. Equity curves for trials
+1-4: [`docs/figures/`](docs/figures/).
+
+## What six pre-registered trials found
+
+**Nothing passed.** Six candidates, six FAILs, and one idea withdrawn before it
+cost a trial. Two were volatility-forecasting claims, two were published calendar
+anomalies, one was a textbook trend rule, and one was a diversified trend
+portfolio built with the control the earlier failures called for. No result here says markets are
+efficient. It says that, tested once, with realistic costs, an honest control
+and a fixed bar, none of these ideas earned its place.
+
+**Why they failed** (the same few reasons keep recurring):
+
+- **Costs consume small effects.** The gilt month-end effect was real: +13.5 bp
+  a month gross, and it beat 1,000 random-day placebos. It cost 14 bp to trade.
+  The monthly net mean was −0.5 bp.
+- **A lower drawdown is usually just less exposure.** Trial 3's trend filter
+  halved its drawdown largely through 2008 and lost Sharpe. In trial 6 the
+  right comparison, the same portfolio at matched volatility, showed no
+  drawdown benefit at all (ratio 1.02). Holding less is free, and it is not
+  skill.
+- **Volatility scaling does the work.** In trials 1 and 6 the control shares
+  the volatility sizing, and in both the sizing did most of the work: the
+  signal added little or nothing on top.
+- **Published effects decay.** The turn-of-month effect was absent in SPY after
+  its best-known paper, and random days did as well.
+- **The honest sample is small.** 19 years is 235 months. At that length a
+  Sharpe gain cannot be detected, and a tail effect barely can. The trial 6
+  pre-registration put its own chance of a clean pass at about 3%.
+
+**What the process caught:**
+
+| Where | What happened | What the process did |
+|---|---|---|
+| Trial 1 | The first run went through a harness with six bugs: it measured the harness, not the strategy | Fixed, re-run on the repaired harness, both runs disclosed |
+| Oct 2026 | Two more bugs: the daily-loss check never fired and the weekly-loss check dropped each week's last session | Fixed with tests proving the checks fire; every trial re-measured; no verdict changed |
+| Trial 2 | p = 0.0506 against 0.05, on a small-sample correction the pre-registration had not pinned down | Recorded as FAIL as written; later pre-registrations pin the implementation |
+| Trial 5 | The frozen text expected 0 skipped months and 1 was skipped; a bad vendor price on 2009-12-24 sat on the entry bar of the worst window | Both disclosed first in the Results; the frozen text and the data were left alone; the trial was not re-run |
+| Trial 6 | The tail test passed on both data sources, by 0.001 on one, and failed under five reasonable variations. The drawdown comparison that would have passed was available and wrong | Five criteria, both sources and fixed outcome tiers gave FAIL; the rescue was named in the Results as not available |
+| All | A trial that fails is tempting to tune | A variant is a new trial and raises the bar for the next one (`n_trials`); the Results list the changes that would have flipped each verdict, so they are not made |
+| Trials 4 and 5 | Both were calendar rules in cash most of the time, which cut drawdown mechanically | Neither had a drawdown criterion; each was judged against a control that matches its exposure |
+
+An independent validator agent reproduced the deciding numbers of every trial
+from the raw inputs before a verdict was recorded.
 
 ## Lessons learned
 
@@ -169,6 +215,17 @@ limits, so their criteria do not move. Equity curves:
 - **Stop rules need a human.** When a pre-registered gate is not literally met,
   the work halts and a person decides. Disclosed deviations are part of the
   record.
+- **Match the control to the claim.** A volatility-matched control, not a fully
+  invested one, is what shows whether a trend signal adds anything beyond
+  holding less. It did not, and the gap between the two comparisons (0.665
+  against 1.02 on drawdown) is the whole story of trial 6.
+- **A real effect can still be worthless.** Trial 5's gilt effect was
+  statistically clear against random days and economically nil after a 14 bp
+  round trip. Write the break-even cost into the pre-registration before the
+  data is touched.
+- **Disclose your own wrong expectations.** The frozen text of trial 5 predicted
+  no skipped months and there was one. The text stayed, and the correction
+  went first in the Results.
 - **Pick the benchmark that tests something.** A risk-enforced buy-and-hold
   SPY hits its permanent drawdown stop in 2018 and is flat from then on, so
   strategies are compared with *unenforced* buy-and-hold.
@@ -186,7 +243,8 @@ validation, never in the order path.
 
 ```
 README.md            this page
-docs/trials/         one page per trial: hypothesis, rule, criteria, result, lesson
+docs/trials/         one page per trial (six, plus the withdrawn one): hypothesis,
+                     rule, criteria, result, lesson
 docs/figures/        strategy vs control equity curves (research data only)
 scripts/             make_figures.py: how the figures were generated
 code/                runnable extract: PIT view, backtest, metrics, validation,
