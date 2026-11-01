@@ -7,6 +7,8 @@
 | Verdict | **FAIL**: the month-end effect is real but costs consume all of it, and it is not stable across the sample |
 | Priors, stated before testing | criterion 1 ~12%; all criteria ~10% |
 
+![Equity curve: strategy vs control](../figures/month_end_gilt.png)
+
 ## Hypothesis
 
 Holding a UK gilt ETF (iShares Core UK Gilts, `IGLT`) only over the **last

@@ -3,8 +3,8 @@
 A paper-trading research framework for US ETFs, with crypto data used as a
 signal. Strategies are pure functions of point-in-time data. A deterministic
 risk layer vetoes any order that would breach the limits, and **no model sits
-in the order path**. Every idea is pre-registered, tested once, and judged by
-an independent validator.
+in the order path**. Every idea is pre-registered and tested once, and a
+read-only validator agent reviews the results (see the research protocol).
 
 **Six trials tested, six FAILs, and one idea withdrawn before testing.** That
 is the intended outcome of a process designed to stop a backtest from lying,
@@ -112,8 +112,9 @@ GitHub's own cron as a backup. Whichever fires second is a no-op.
    strategy that keeps its edge on shuffled data.
    ([`validation.py`](code/src/tradingbot/research/validation.py))
 6. **Independent validator.** A read-only reviewer agent, whose brief is to
-   kill the strategy, reproduces every deciding number before a verdict is
-   recorded.
+   kill the strategy, reviews each result. In trials 4-6 it reproduced every
+   deciding number with its own code before a verdict was recorded; the
+   findings section above says what is documented for trials 1-3.
 7. **Regression gate.** Before a new trial runs, earlier trials' headline
    numbers must reproduce. If they do not, the work stops until a human
    decides.
@@ -145,8 +146,10 @@ Both were fixed, and every trial was re-measured. The recorded values are kept
 as what each trial was judged on, and the corrected values sit alongside them.
 **No verdict changed.** Trials 3 and 4 were scored on runs without risk
 limits, so their criteria do not move. Trials 5 and 6 ran after the fix, so
-their recorded and corrected values are the same. Equity curves for trials
-1-4: [`docs/figures/`](docs/figures/).
+their recorded and corrected values are the same. Equity curves for all six
+trials: [`docs/figures/`](docs/figures/). Trials 5 and 6 are regenerated from the
+private data snapshots by `scripts/make_figures.py`, which checks each figure
+against the recorded numbers before saving.
 
 ## What six pre-registered trials found
 
@@ -186,10 +189,14 @@ and a fixed bar, none of these ideas earned its place.
 | Trial 5 | The frozen text expected 0 skipped months and 1 was skipped; a bad vendor price on 2009-12-24 sat on the entry bar of the worst window | Both disclosed first in the Results; the frozen text and the data were left alone; the trial was not re-run |
 | Trial 6 | The tail test passed on both data sources, by 0.001 on one, and failed under five reasonable variations. The drawdown comparison that would have passed was available and wrong | Five criteria, both sources and fixed outcome tiers gave FAIL; the rescue was named in the Results as not available |
 | All | A trial that fails is tempting to tune | A variant is a new trial and raises the bar for the next one (`n_trials`); the Results list the changes that would have flipped each verdict, so they are not made |
-| Trials 4 and 5 | Both were calendar rules in cash most of the time, which cut drawdown mechanically | Neither had a drawdown criterion; each was judged against a control that matches its exposure |
+| Trials 4 and 5 | Both were calendar rules in cash most of the time, so a smaller drawdown would have been mechanical | Neither had a drawdown criterion. Trial 4 was judged against SPY buy-and-hold, with a same-exposure permutation test that keeps the calendar and shuffles returns; trial 5 against cash, with an exposure-matched placebo of three-session windows on random days |
 
-An independent validator agent reproduced the deciding numbers of every trial
-from the raw inputs before a verdict was recorded.
+A read-only `backtest-validator` agent reviewed the results. For trials 4, 5
+and 6 it reproduced every deciding number with its own code before a verdict
+was recorded. For trial 1 it ran the test and rebuilt the deciding
+criterion-4 pipeline independently, and for trial 3 it reproduced the
+unenforced runs from the snapshot. Trial 2's Results document an in-script
+independent re-implementation of the forecast, but no validator-agent review.
 
 ## Lessons learned
 
@@ -232,7 +239,7 @@ from the raw inputs before a verdict was recorded.
 
 ## Stack
 
-Python 3.11-3.13 · pandas · NumPy · SciPy · PyArrow · pytest (805 tests in the
+Python 3.11-3.13 · pandas · NumPy · SciPy · PyArrow · pytest (1,206 tests in the
 full system) · ruff · mypy ·
 GitHub Actions (scheduled runs, CI, branch protection, CODEOWNERS on risk and
 execution paths) · Alpaca paper-trading API · Yahoo Finance, FRED and Binance

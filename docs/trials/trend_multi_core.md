@@ -7,6 +7,8 @@
 | Verdict | **FAIL**: criterion 2 (drawdown) fails on both data sources; the tail improvement is real but marginal |
 | Priors, stated before testing | all criteria ~3%; "inconclusive but favourable" ~27%; control wins or fail ~70% |
 
+![Equity curve: strategy vs control](../figures/trend_multi_core.png)
+
 ## Hypothesis
 
 A long-or-cash, volatility-scaled portfolio of 12 ETFs held in proportion to a
